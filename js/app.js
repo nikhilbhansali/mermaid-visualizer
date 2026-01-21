@@ -8,6 +8,7 @@ import { AspectRatio } from './modules/aspect-ratio.js';
 import { PngExporter } from './modules/export-png.js';
 import { PdfExporter } from './modules/export-pdf.js';
 import { FileManager } from './modules/file-manager.js';
+import { UrlManager } from './modules/url-manager.js';
 import { TEMPLATES } from './config.js';
 
 class MermaidVisualizer {
@@ -20,6 +21,7 @@ class MermaidVisualizer {
         this.pngExporter = null;
         this.pdfExporter = null;
         this.fileManager = null;
+        this.urlManager = null;
 
         this.scale = 2; // Default export scale
 
@@ -39,15 +41,19 @@ class MermaidVisualizer {
         this.pngExporter = new PngExporter(this.renderer, this.aspectRatio);
         this.pdfExporter = new PdfExporter(this.pngExporter, this.renderer);
         this.fileManager = new FileManager();
+        this.urlManager = new UrlManager();
 
         // Wire up event handlers
         this.setupEventHandlers();
 
-        // Load initial template
-        this.editor.setCode(TEMPLATES.flowchart);
-
         // Show toast container
         this.createToastContainer();
+
+        // Check if loading from shared URL, otherwise load default template
+        const loadedFromUrl = await this.loadFromUrl();
+        if (!loadedFromUrl) {
+            this.editor.setCode(TEMPLATES.flowchart);
+        }
 
         console.log('Mermaid Visualizer initialized');
     }
@@ -144,7 +150,11 @@ class MermaidVisualizer {
             this.exportPdf();
         });
 
-        // Save/Load buttons
+        // Save/Load/Share buttons
+        document.getElementById('btn-share').addEventListener('click', () => {
+            this.shareUrl();
+        });
+
         document.getElementById('btn-save').addEventListener('click', () => {
             this.saveProject();
         });
@@ -234,6 +244,71 @@ class MermaidVisualizer {
             console.error('Load error:', error);
             this.showToast(`Load failed: ${error.message}`, 'error');
         }
+    }
+
+    async loadFromUrl() {
+        const urlData = this.urlManager.parseUrl();
+
+        if (!urlData.hasData) {
+            return false;
+        }
+
+        try {
+            // Load code (or default template if no code provided)
+            if (urlData.code) {
+                this.editor.setCode(urlData.code);
+            } else {
+                // No code in URL, load default template
+                this.editor.setCode(TEMPLATES.flowchart);
+            }
+
+            // Load theme
+            if (urlData.themePreset) {
+                this.colorPanel.applyPreset(urlData.themePreset);
+                await this.renderer.updateTheme(this.colorPanel.getTheme());
+            } else if (urlData.themeVariables) {
+                this.colorPanel.loadFromTheme(urlData.themeVariables);
+                await this.renderer.updateTheme(urlData.themeVariables);
+            }
+
+            // Load aspect ratio
+            if (urlData.aspectRatio) {
+                this.aspectRatio.loadRatio(urlData.aspectRatio);
+            }
+
+            // Clear URL params to keep it clean
+            this.urlManager.clearUrlParams();
+
+            this.showToast('Diagram loaded from shared URL', 'success');
+            return true;
+        } catch (error) {
+            console.error('Error loading from URL:', error);
+            return false;
+        }
+    }
+
+    shareUrl() {
+        const code = this.editor.getCode();
+        const theme = {
+            preset: this.colorPanel.getCurrentPreset(),
+            variables: this.colorPanel.getTheme()
+        };
+        const ratio = this.aspectRatio.getRatioString();
+
+        const result = this.urlManager.generateShareUrl(code, theme, ratio);
+
+        // Warn if URL is very long
+        if (result.isLong) {
+            this.showToast(`URL is ${result.length} chars (may be too long for some browsers)`, 'warning');
+        }
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(result.url).then(() => {
+            this.showToast('Share URL copied to clipboard!', 'success');
+        }).catch(() => {
+            // Fallback: show URL in prompt
+            prompt('Copy this URL to share:', result.url);
+        });
     }
 
     generateFilename(extension) {

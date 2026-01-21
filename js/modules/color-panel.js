@@ -154,4 +154,15 @@ export class ColorPanel {
     getTheme() {
         return this.themeBuilder.getTheme();
     }
+
+    // Get the currently active preset name, or null if custom
+    getCurrentPreset() {
+        const activeBtn = document.querySelector('.btn-preset.active');
+        return activeBtn ? activeBtn.dataset.theme : null;
+    }
+
+    // Apply a preset by name (for URL loading)
+    applyPreset(presetName) {
+        this.selectPreset(presetName);
+    }
 }
