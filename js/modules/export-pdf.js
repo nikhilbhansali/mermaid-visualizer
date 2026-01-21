@@ -223,61 +223,9 @@ export class PdfExporter {
     }
 
     async exportFitToPage(filename = 'diagram.pdf') {
-        if (typeof window.jspdf === 'undefined') {
-            throw new Error('jsPDF library not loaded');
-        }
-
-        const svg = this.renderer.getSvg();
-        if (!svg) {
-            throw new Error('No diagram to export');
-        }
-
-        const svgDims = this.getSvgDimensions();
-        const orientation = this.getEffectiveOrientation(svgDims);
-        const { jsPDF } = window.jspdf;
-
-        const pdf = new jsPDF({
-            orientation,
-            unit: 'mm',
-            format: this.pageSize
-        });
-
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const contentWidth = pageWidth - (this.margin * 2);
-        const contentHeight = pageHeight - (this.margin * 2);
-
-        // Prepare SVG
-        const preparedSvg = this.prepareSvgForPdf(svg);
-
-        // Calculate dimensions to fit
-        const scaleX = contentWidth / svgDims.width;
-        const scaleY = contentHeight / svgDims.height;
-        const scale = Math.min(scaleX, scaleY);
-
-        const finalWidth = svgDims.width * scale;
-        const finalHeight = svgDims.height * scale;
-
-        // Center on page
-        const x = this.margin + (contentWidth - finalWidth) / 2;
-        const y = this.margin + (contentHeight - finalHeight) / 2;
-
-        // Set viewBox to match original SVG dimensions
-        preparedSvg.setAttribute('viewBox', `${svgDims.x} ${svgDims.y} ${svgDims.width} ${svgDims.height}`);
-        preparedSvg.setAttribute('width', finalWidth);
-        preparedSvg.setAttribute('height', finalHeight);
-
-        // Use svg2pdf.js for direct rendering
-        try {
-            await pdf.svg(preparedSvg, { x, y, width: finalWidth, height: finalHeight });
-        } catch (e) {
-            // Fallback to PNG method if svg2pdf fails
-            console.warn('svg2pdf failed, falling back to PNG method:', e);
-            return this.exportFitToPagePng(filename);
-        }
-
-        pdf.save(filename);
-        return { success: true, pages: 1 };
+        // Use PNG-based export for reliable rendering
+        // svg2pdf.js has issues with Mermaid's CSS-based styling
+        return this.exportFitToPagePng(filename);
     }
 
     // Fallback PNG-based export
@@ -325,110 +273,9 @@ export class PdfExporter {
     }
 
     async exportMultiPage(filename = 'diagram.pdf') {
-        if (typeof window.jspdf === 'undefined') {
-            throw new Error('jsPDF library not loaded');
-        }
-
-        const svg = this.renderer.getSvg();
-        if (!svg) {
-            throw new Error('No diagram to export');
-        }
-
-        const svgDims = this.getSvgDimensions();
-        const exportInfo = this.calculateExportInfo();
-        const { jsPDF } = window.jspdf;
-
-        const pdf = new jsPDF({
-            orientation: exportInfo.orientation,
-            unit: 'mm',
-            format: this.pageSize
-        });
-
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const contentWidth = pageWidth - (this.margin * 2);
-        const contentHeight = pageHeight - (this.margin * 2) - 8; // Footer space
-
-        const totalPages = exportInfo.pages;
-        const isHorizontal = exportInfo.direction === 'horizontal';
-
-        for (let page = 0; page < totalPages; page++) {
-            if (page > 0) {
-                pdf.addPage();
-            }
-
-            // Calculate the slice of SVG to show on this page
-            const preparedSvg = this.prepareSvgForPdf(svg);
-
-            let viewBoxX, viewBoxY, viewBoxW, viewBoxH;
-            let renderWidth, renderHeight;
-
-            if (isHorizontal) {
-                // Horizontal slicing (left to right for wide diagrams)
-                const scale = contentHeight / svgDims.height;
-                const scaledWidth = svgDims.width * scale;
-                const effectiveWidth = contentWidth - this.overlap;
-
-                viewBoxH = svgDims.height;
-                viewBoxW = (contentWidth / scale);
-                viewBoxY = svgDims.y;
-                viewBoxX = svgDims.x + (page * (effectiveWidth / scale));
-
-                // Adjust last page
-                if (page === totalPages - 1) {
-                    viewBoxW = svgDims.width - (viewBoxX - svgDims.x);
-                }
-
-                renderWidth = Math.min(viewBoxW * scale, contentWidth);
-                renderHeight = contentHeight;
-            } else {
-                // Vertical slicing (top to bottom for tall diagrams)
-                const scale = contentWidth / svgDims.width;
-                const scaledHeight = svgDims.height * scale;
-                const effectiveHeight = contentHeight - this.overlap;
-
-                viewBoxW = svgDims.width;
-                viewBoxH = (contentHeight / scale);
-                viewBoxX = svgDims.x;
-                viewBoxY = svgDims.y + (page * (effectiveHeight / scale));
-
-                // Adjust last page
-                if (page === totalPages - 1) {
-                    viewBoxH = svgDims.height - (viewBoxY - svgDims.y);
-                }
-
-                renderWidth = contentWidth;
-                renderHeight = Math.min(viewBoxH * scale, contentHeight);
-            }
-
-            preparedSvg.setAttribute('viewBox', `${viewBoxX} ${viewBoxY} ${viewBoxW} ${viewBoxH}`);
-            preparedSvg.setAttribute('width', renderWidth);
-            preparedSvg.setAttribute('height', renderHeight);
-
-            // Center the slice on the page
-            const x = this.margin + (contentWidth - renderWidth) / 2;
-            const y = this.margin;
-
-            try {
-                await pdf.svg(preparedSvg, { x, y, width: renderWidth, height: renderHeight });
-            } catch (e) {
-                console.warn('svg2pdf failed on page ' + (page + 1) + ', falling back to PNG');
-                return this.exportMultiPagePng(filename);
-            }
-
-            // Add page footer
-            pdf.setFontSize(9);
-            pdf.setTextColor(128, 128, 128);
-            pdf.text(
-                `Page ${page + 1} of ${totalPages}`,
-                pageWidth / 2,
-                pageHeight - 5,
-                { align: 'center' }
-            );
-        }
-
-        pdf.save(filename);
-        return { success: true, pages: totalPages };
+        // Use PNG-based export for reliable rendering
+        // svg2pdf.js has issues with Mermaid's CSS-based styling
+        return this.exportMultiPagePng(filename);
     }
 
     // Fallback PNG-based multi-page export
