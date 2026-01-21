@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid Visualizer</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="logo">Mermaid Visualizer</h1>
+            </div>
+            <div class="header-right">
+                <button id="btn-save" class="btn btn-secondary">Save</button>
+                <button id="btn-load" class="btn btn-secondary">Load</button>
+                <input type="file" id="file-input" accept=".mermproj" hidden>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Editor Panel -->
+            <section class="panel editor-panel">
+                <div class="panel-header">
+                    <h2>Code Editor</h2>
+                    <div class="template-selector">
+                        <select id="template-select">
+                            <option value="">Templates...</option>
+                            <option value="flowchart">Flowchart</option>
+                            <option value="sequence">Sequence Diagram</option>
+                            <option value="gantt">Gantt Chart</option>
+                            <option value="pie">Pie Chart</option>
+                            <option value="class">Class Diagram</option>
+                            <option value="state">State Diagram</option>
+                            <option value="er">ER Diagram</option>
+                            <option value="mindmap">Mind Map</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="editor-container">
+                    <textarea id="mermaid-input" placeholder="Enter your Mermaid code here..."></textarea>
+                    <div id="error-display" class="error-display hidden"></div>
+                </div>
+            </section>
+
+            <!-- Preview Panel -->
+            <section class="panel preview-panel">
+                <div class="panel-header">
+                    <h2>Preview</h2>
+                    <div class="aspect-controls">
+                        <label>Aspect:</label>
+                        <select id="aspect-select">
+                            <option value="auto">Auto</option>
+                            <option value="16:9">16:9</option>
+                            <option value="9:16">9:16</option>
+                            <option value="4:3">4:3</option>
+                            <option value="1:1">1:1</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        <div id="custom-ratio" class="custom-ratio hidden">
+                            <input type="number" id="ratio-width" min="1" max="100" value="16" class="ratio-input">
+                            <span>:</span>
+                            <input type="number" id="ratio-height" min="1" max="100" value="9" class="ratio-input">
+                        </div>
+                    </div>
+                </div>
+                <div class="preview-container">
+                    <div id="mermaid-preview" class="mermaid-output"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Color Customization Panel -->
+        <section class="color-panel">
+            <div class="color-panel-header">
+                <h2>Color Customization</h2>
+                <div class="theme-presets">
+                    <button class="btn btn-preset active" data-theme="default">Default</button>
+                    <button class="btn btn-preset" data-theme="dark">Dark</button>
+                    <button class="btn btn-preset" data-theme="forest">Forest</button>
+                    <button class="btn btn-preset" data-theme="neutral">Neutral</button>
+                </div>
+            </div>
+            <div class="color-categories">
+                <!-- General Colors -->
+                <div class="color-category">
+                    <h3>General</h3>
+                    <div class="color-grid">
+                        <div class="color-item">
+                            <label>Background</label>
+                            <input type="color" id="color-background" value="#ffffff">
+                        </div>
+                        <div class="color-item">
+                            <label>Primary Text</label>
+                            <input type="color" id="color-primaryText" value="#333333">
+                        </div>
+                        <div class="color-item">
+                            <label>Line Color</label>
+                            <input type="color" id="color-lineColor" value="#333333">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Node Colors -->
+                <div class="color-category">
+                    <h3>Nodes</h3>
+                    <div class="color-grid">
+                        <div class="color-item">
+                            <label>Primary Fill</label>
+                            <input type="color" id="color-primaryColor" value="#ECECFF">
+                        </div>
+                        <div class="color-item">
+                            <label>Primary Border</label>
+                            <input type="color" id="color-primaryBorderColor" value="#9370DB">
+                        </div>
+                        <div class="color-item">
+                            <label>Secondary Fill</label>
+                            <input type="color" id="color-secondaryColor" value="#ffffde">
+                        </div>
+                        <div class="color-item">
+                            <label>Tertiary Fill</label>
+                            <input type="color" id="color-tertiaryColor" value="#fff0f0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagram-Specific Colors -->
+                <div class="color-category" id="diagram-specific-colors">
+                    <h3>Diagram Specific</h3>
+                    <div class="color-grid" id="specific-colors-grid">
+                        <!-- Populated dynamically based on diagram type -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Export Panel -->
+        <footer class="export-panel">
+            <div class="export-options">
+                <div class="export-group">
+                    <label>PNG Scale:</label>
+                    <div class="scale-buttons">
+                        <button class="btn btn-scale active" data-scale="1">1x</button>
+                        <button class="btn btn-scale" data-scale="2">2x</button>
+                        <button class="btn btn-scale" data-scale="3">3x</button>
+                    </div>
+                </div>
+                <div class="export-group">
+                    <label>PDF Mode:</label>
+                    <select id="pdf-mode">
+                        <option value="fit">Fit to Single Page</option>
+                        <option value="multi-auto">Multi-Page (Auto)</option>
+                        <option value="multi-vertical">Multi-Page (Vertical)</option>
+                        <option value="multi-horizontal">Multi-Page (Horizontal)</option>
+                    </select>
+                </div>
+                <div class="export-group">
+                    <label>Page Size:</label>
+                    <select id="pdf-size">
+                        <option value="a4">A4</option>
+                        <option value="letter">Letter</option>
+                        <option value="a3">A3</option>
+                        <option value="legal">Legal</option>
+                    </select>
+                </div>
+                <div class="export-group">
+                    <label>Orientation:</label>
+                    <select id="pdf-orientation">
+                        <option value="auto">Auto</option>
+                        <option value="landscape">Landscape</option>
+                        <option value="portrait">Portrait</option>
+                    </select>
+                </div>
+                <div class="export-group">
+                    <label>Margins:</label>
+                    <input type="range" id="pdf-margin" min="5" max="30" value="10" class="margin-slider">
+                    <span id="margin-value">10mm</span>
+                </div>
+            </div>
+            <div id="export-preview" class="export-preview">
+                <!-- Shows export info like "Will export as 3 pages (A4 Landscape)" -->
+            </div>
+            <div id="pdf-warning" class="pdf-warning hidden">
+                <span class="warning-icon">&#9888;</span>
+                Diagram will be scaled to <span id="scale-percent"></span>%.
+                Consider using multi-page mode for better readability.
+            </div>
+            <div class="export-buttons">
+                <button id="btn-export-png" class="btn btn-primary">Export PNG</button>
+                <button id="btn-export-pdf" class="btn btn-primary">Export PDF</button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
