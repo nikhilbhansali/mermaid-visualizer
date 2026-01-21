@@ -134,7 +134,7 @@ export class PdfExporter {
         return this.exportMultiPage(filename);
     }
 
-    // Prepare SVG for PDF export - clone and inline styles
+    // Prepare SVG for PDF export - clone and inline styles as attributes
     prepareSvgForPdf(svg) {
         const clone = svg.cloneNode(true);
 
@@ -142,10 +142,82 @@ export class PdfExporter {
         clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
         clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
 
-        // Inline styles using the PNG exporter's method
-        if (this.pngExporter && this.pngExporter.inlineStyles) {
-            this.pngExporter.inlineStyles(clone);
-        }
+        // svg2pdf.js needs attributes, not just CSS styles
+        // Inline all computed styles as SVG attributes
+        const elements = clone.querySelectorAll('*');
+        elements.forEach(el => {
+            const computed = window.getComputedStyle(el);
+
+            // Get fill color
+            const fill = computed.getPropertyValue('fill');
+            if (fill && fill !== 'none' && fill !== '') {
+                el.setAttribute('fill', fill);
+            }
+
+            // Get stroke color
+            const stroke = computed.getPropertyValue('stroke');
+            if (stroke && stroke !== 'none' && stroke !== '') {
+                el.setAttribute('stroke', stroke);
+            }
+
+            // Get stroke width
+            const strokeWidth = computed.getPropertyValue('stroke-width');
+            if (strokeWidth && strokeWidth !== '0' && strokeWidth !== '0px') {
+                el.setAttribute('stroke-width', strokeWidth);
+            }
+
+            // Get opacity
+            const opacity = computed.getPropertyValue('opacity');
+            if (opacity && opacity !== '1') {
+                el.setAttribute('opacity', opacity);
+            }
+        });
+
+        // Handle text elements specifically - svg2pdf needs fill for text color
+        clone.querySelectorAll('text, tspan').forEach(el => {
+            const computed = window.getComputedStyle(el);
+
+            // Text color in SVG is controlled by 'fill', not 'color'
+            let textColor = computed.getPropertyValue('fill');
+            if (!textColor || textColor === 'none' || textColor === '') {
+                textColor = computed.getPropertyValue('color');
+            }
+            if (textColor && textColor !== 'none') {
+                el.setAttribute('fill', textColor);
+            }
+
+            // Font properties
+            const fontSize = computed.getPropertyValue('font-size');
+            if (fontSize) {
+                el.setAttribute('font-size', fontSize);
+            }
+
+            const fontWeight = computed.getPropertyValue('font-weight');
+            if (fontWeight && fontWeight !== 'normal' && fontWeight !== '400') {
+                el.setAttribute('font-weight', fontWeight);
+            }
+
+            // Use system fonts for PDF compatibility
+            el.setAttribute('font-family', 'Helvetica, Arial, sans-serif');
+        });
+
+        // Ensure shapes have proper fill colors
+        clone.querySelectorAll('rect, polygon, circle, ellipse, path').forEach(el => {
+            const computed = window.getComputedStyle(el);
+            const fill = computed.getPropertyValue('fill');
+
+            // If fill is not set or is 'none', check for background-color
+            if (!el.getAttribute('fill') || el.getAttribute('fill') === 'none') {
+                if (fill && fill !== 'none') {
+                    el.setAttribute('fill', fill);
+                }
+            }
+        });
+
+        // Remove style elements that might conflict
+        clone.querySelectorAll('style').forEach(styleEl => {
+            styleEl.remove();
+        });
 
         return clone;
     }
